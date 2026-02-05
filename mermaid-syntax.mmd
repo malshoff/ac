@@ -1,0 +1,58 @@
+graph TB
+    subgraph "User Mode"
+        Game[Protected Game Process]
+        Module[Module DLL<br/>user.dll]
+        Server[Server<br/>Go Service<br/>Not Required]
+        
+        subgraph "Module Components"
+            Dispatcher[Dispatcher<br/>Orchestrates Operations]
+            KernelInterface[Kernel Interface<br/>Driver Communication]
+            MessageQueue[Message Queue<br/>Named Pipe Client]
+            Crypt[Crypto Module<br/>AES Encryption]
+        end
+    end
+    
+    subgraph "Kernel Mode"
+        Driver[Driver<br/>driver.sys]
+        
+        subgraph "Driver Components"
+            DeviceControl[Device Control<br/>IOCTL Handler]
+            Session[Session Manager<br/>Active Session State]
+            IRPQueue[IRP Queue<br/>Cancel-Safe Queue]
+            SharedMapping[Shared Memory<br/>Mapped Buffer]
+            Callbacks[Kernel Callbacks<br/>Process/Thread Obs]
+            Integrity[Integrity Checks<br/>Module Validation]
+        end
+    end
+    
+    Game -->|Inject| Module
+    Module -->|Creates| Dispatcher
+    Dispatcher -->|Uses| KernelInterface
+    Dispatcher -->|Uses| MessageQueue
+    
+    KernelInterface -->|CreateFileW| Driver
+    KernelInterface -->|DeviceIoControl<br/>IOCTLs| DeviceControl
+    KernelInterface -->|I/O Completion Port| IRPQueue
+    KernelInterface -->|Memory Mapping| SharedMapping
+    
+    MessageQueue -.->|Named Pipe<br/>Optional| Server
+    
+    DeviceControl -->|Manages| Session
+    DeviceControl -->|Queues Reports| IRPQueue
+    DeviceControl -->|Initializes| SharedMapping
+    DeviceControl -->|Registers| Callbacks
+    
+    IRPQueue -->|Completes IRPs<br/>Async Reports| KernelInterface
+    SharedMapping -->|Timer-Based<br/>Operations| Integrity
+    
+    Callbacks -->|Detects Threats| IRPQueue
+    Integrity -->|Validates Modules| IRPQueue
+    
+    Session -->|Stores| Crypt
+    
+    style Module fill:#4a90e2
+    style Driver fill:#e24a4a
+    style KernelInterface fill:#50c878
+    style DeviceControl fill:#ff6b6b
+    style IRPQueue fill:#ffa500
+    style SharedMapping fill:#9370db
